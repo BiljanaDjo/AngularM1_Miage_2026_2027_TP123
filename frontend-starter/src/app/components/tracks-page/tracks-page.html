@@ -16,11 +16,20 @@
     <article class="card">
       <div class="row">
         <h2>Mes pistes</h2>
-        <button type="button" (click)="load()">Actualiser</button>
+        <button type="button" (click)="load()" [disabled]="loading()">Actualiser</button>
       </div>
+
+      <!-- Affichage de l'état d'erreur éventuelle via le signal error() -->
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      <!-- État de chargement réactif avec le flux de contrôle @if -->
       @if (loading()) {
         <p>Chargement…</p>
       }
+
+      <!-- Itération sur les pistes de la page courante avec @for et @empty -->
       @for (track of tracks(); track track.id) {
         <div class="track">
           <div>
@@ -30,13 +39,30 @@
           <button type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
         </div>
       } @empty {
-        <p>Aucune piste.</p>
+        @if (!loading() && !error()) {
+          <p>Aucune piste.</p>
+        }
       }
+
+      <!-- Pagination serveur : boutons Précédent et Suivant désactivés aux bornes et pendant le chargement -->
       <div class="pager">
-        <button type="button" (click)="go(page() - 1)" [disabled]="page() === 1">Préc.</button>
+        <button
+          type="button"
+          (click)="go(page() - 1)"
+          [disabled]="page() <= 1 || loading()"
+        >
+          Précédent
+        </button>
         <span>Page {{ page() }} / {{ pages() }}</span>
-        <button type="button" (click)="go(page() + 1)" [disabled]="page() === pages()">Suiv.</button>
+        <button
+          type="button"
+          (click)="go(page() + 1)"
+          [disabled]="page() >= pages() || loading()"
+        >
+          Suivant
+        </button>
       </div>
+
       @if (audioUrl()) {
         <audio [src]="audioUrl()" controls autoplay></audio>
       }
