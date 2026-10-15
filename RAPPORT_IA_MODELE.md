@@ -439,58 +439,31 @@ La requête audio **échouerait immédiatement avec une erreur HTTP 401 Unauthor
    * Affichage du titre, du badge court de format (`MP3`, `WAV`, `OGG`, `M4A`), du nom du fichier d'origine, de la taille formatée en Ko/Mo (`formatBytes()`) et de la date d'ajout en français (`formatDate()`).
    * Bouton d'écoute réactif changeant d'état (`▶ Écouter`, `⏳ Chargement…`, `🔊 En cours`) et mise en évidence de la carte en cours de lecture (`.playing`).
 
-   ![Cards de bibliothèque responsives](image-5.png)
-   *Figure 3.1 — Affichage de la bibliothèque en cartes modernes avec format, taille lisible et date formatée.*
-
-   ![Message de confirmation d'upload](image-6.png)
-   *Figure 3.2 — Alerte verte de confirmation après importation réussie et formulaire réinitialisé.*
-
+   ![alt text](image-5.png)
+   ![alt text](image-6.png)
 4. **Sécurisation du lecteur audio et gestion du cycle de vie** :
    * Ajout du signal `currentTrack` et d'un conteneur dédié pour le lecteur audio affichant le morceau en cours d'écoute.
    * Gestion d'erreur via le signal `audioError` et l'événement natif `(error)="onAudioPlaybackError()"`.
    * Implémentation du cycle de vie Angular `OnDestroy` avec la méthode `ngOnDestroy()` appelant systématiquement `URL.revokeObjectURL(this.audioUrl())` pour prévenir toute fuite de mémoire RAM.
 
-   ![Morceau en cours d'écoute et requête audio](image-7.png)
-   *Figure 3.3 — Lecture en cours de la piste (badge « En cours », bordure verte) et flux audio de 6,41 Mo reçu.*
-
-   ![En-têtes de la requête audio avec JWT](image-8.png)
-   *Figure 3.4 — Livrable TP2 : En-têtes HTTP de la requête audio GET /api/tracks/:id/audio avec Authorization Bearer token (200 OK).*
-
-5. **Améliorations facultatives implémentées** :
-   * **Suppression avec confirmation (`DELETE /api/tracks/:id`)** :
-     * Bouton de suppression 🗑️ intégré sur chaque card.
-     * Boîte de dialogue de confirmation native `window.confirm(...)` prévenant toute suppression accidentelle.
-     * Arrêt immédiat et révocation du Blob si la piste en cours de suppression est celle actuellement lue.
-     * Appel de `TrackService.delete(id)` (HTTP `204 No Content`), notification de succès et ajustement automatique de la page courante si le dernier élément de la page a été supprimé.
-   * **Filtre réactif par titre (Signal `computed`)** :
-     * Barre de recherche avec input réactif et bouton pour vider la saisie.
-     * Exploitation d'un Signal dérivé `readonly filteredTracks = computed(...)` qui recalcule instantanément la liste sans requêter inutilement le serveur.
-     * Message spécifique dans `@empty` si aucun morceau ne correspond à la recherche, avec bouton de réinitialisation.
-
-   ![Interface avec barre de filtre et boutons de suppression](image-9.png)
-   *Figure 3.5 — Interface enrichie avec la barre de recherche réactive par titre et les boutons de suppression 🗑️ sur chaque card.*
-
-   ![Capture Network DELETE 204 No Content](image-10.png)
-   *Figure 3.6 — Onglet Réseau DevTools : Requête HTTP DELETE /api/tracks/:id avec en-tête Authorization Bearer token et statut 204 No Content.*
+   ![alt text](image-7.png)
+   ![alt text](image-8.png)
 
 ---
 
 ### 6. Fichiers modifiés pour la Mission 3
-* `frontend-starter/src/app/shared/services/track.service.ts` : ajout de la méthode `delete(id: string)` pour l'appel `DELETE /api/tracks/:id`.
-* `frontend-starter/src/app/components/tracks-page/tracks-page.ts` : validation taille/format, signaux d'upload, signaux audio, `ngOnDestroy()`, signaux `titleFilter`, `filteredTracks` (`computed`), `deletingId` et méthode `deleteTrack()`.
-* `frontend-starter/src/app/components/tracks-page/tracks-page.html` : formulaire d'upload enrichi, barre de filtre par titre, cards avec actions d'écoute et de suppression, lecteur audio sécurisé.
-* `frontend-starter/src/app/components/tracks-page/tracks-page.css` : styles pour `.cards-list`, `.track-card`, `.badge-format`, `.btn-play`, `.btn-delete`, `.filter-bar`, `.player-container`, alertes `.success` et `.error`.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.ts` : validation taille/format, signaux `uploading`, `uploadSuccess`, `uploadError`, `currentTrack`, `audioLoading`, `audioError`, helpers de formatage et `ngOnDestroy()`.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.html` : formulaire d'upload avec retours d'état, liste en cards responsives, affichage du morceau en cours et lecteur audio sécurisé.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.css` : styles pour `.cards-list`, `.track-card`, `.badge-format`, `.btn-play`, `.player-container`, alertes `.success` et `.error`.
 
 ---
 
 ### 7. Preuve de fonctionnement et Livrables TP2
-* **Compilation Angular** : `npm run build` exécuté avec succès en 1.3s (aucun warning, bundle complet : 311 kB).
+* **Compilation Angular** : `npm run build` exécuté avec succès en 1.3s (aucun warning, bundle complet : 306 kB).
 * **Vérification Network (DevTools)** :
-  * Upload d'un fichier audio libre de droits (`POST /api/tracks` avec `multipart/form-data`, champ `audio` et champ `title`) — Figure 3.2.
-  * Récupération du flux audio authentifié (`GET /api/tracks/:id/audio` avec en-tête `Authorization: Bearer <token>`) — Figure 3.3 et Figure 3.4.
+  * Upload d'un fichier audio libre de droits (`POST /api/tracks` avec `multipart/form-data`, champ `audio` et champ `title`).
+  * Récupération du flux audio authentifié (`GET /api/tracks/:id/audio` avec en-tête `Authorization: Bearer <token>`).
   * Révocation effective de l'URL précédente lors du changement de piste ou de la destruction du composant.
-  * Suppression physique et en base via `DELETE /api/tracks/:id` avec statut `204 No Content`.
-  * Filtrage dynamique immédiat via Signal `computed()` lors de la saisie d'un titre.
 
 ---
 
@@ -501,40 +474,11 @@ La requête audio **échouerait immédiatement avec une erreur HTTP 401 Unauthor
    * Le `Blob` est alloué en RAM client par `HttpClient`.
    * L'`ObjectURL` est une clé interne enregistrée dans le navigateur qui pointe vers ce `Blob`.
    * La méthode `URL.revokeObjectURL` est indispensable pour ordonner au navigateur de libérer cette mémoire vive dès que le morceau n'est plus écouté ou que le composant est détruit.
-3. **Comment fonctionne le filtre par titre avec `computed()` ?**
-   * Un Signal calculé (`computed()`) déclare une dépendance réactive automatique vers `titleFilter()` et `tracks()`. Dès que l'un des deux signaux change, Angular recalcule la liste filtrée sans avoir besoin d'écouter manuellement des événements de frappe ou d'appeler `subscribe()`.
-4. **Pourquoi vérifier et nettoyer le lecteur avant la suppression ?**
-   * Si l'utilisateur supprime une piste pendant qu'elle est en train d'être jouée, laisser l'ancienne `ObjectURL` active consommerait de la mémoire pour une ressource qui n'existe plus sur le serveur. Il faut donc révoquer l'URL locale, vider `audioUrl` et passer `currentTrack` à `null`.
-
----
-
-### 9. Validation du Checkpoint Network & Conformité des Livrables TP2
-
-#### A. Grille d'évaluation du Checkpoint Network (Exigences du sujet TP2)
-
-Le tableau ci-dessous détaille la vérification point par point de chaque exigence réseau du sujet TP2 :
-
-| Point de vérification requis | Statut | Preuve technique & observation réseau |
-| :--- | :---: | :--- |
-| **1. Chaque changement de page modifie le paramètre `page`** | **VALIDÉ** | • **Implémentation** : `TrackService.list(page, limit)` sérialise `{ params: { page, limit } }`.<br/>• **Comportement** : Au clic sur « Suivant », `page.set(targetPage)` déclenche `GET /api/tracks?page=2&limit=5` (statut `200 OK`). Les boutons « Précédent » et « Suivant » sont rigoureusement désactivés aux bornes (`page() <= 1` et `page() >= pages()`) et pendant `loading()`.<br/>• **Preuve DevTools** : **Figure 2.4** dans l'onglet Network. |
-| **2. L'upload est bien multipart et contient `audio` et `title`** | **VALIDÉ** | • **Implémentation** : `TrackService.upload(file, title)` instancie `FormData`, exécute `body.append('audio', file)` et `body.append('title', title)`.<br/>• **En-têtes HTTP** : Le navigateur génère automatiquement le `Content-Type: multipart/form-data; boundary=...`, et l'intercepteur Angular `authInterceptor` ajoute l'en-tête `Authorization: Bearer <token>`.<br/>• **Traitement backend** : Multer (`upload.single('audio')`) extrait le binaire sur disque et Express extrait `req.body.title` pour créer le document Mongoose (statut `201 Created`).<br/>• **Preuve** : **Figure 3.2** et notification de confirmation. |
-| **3. La réponse de lecture est un flux audio** | **VALIDÉ** | • **Implémentation** : `TrackService.audio(id)` émet `GET /api/tracks/:id/audio` avec `{ responseType: 'blob' }`.<br/>• **Réponse serveur** : Express utilise `res.sendFile(audioPath)` avec `res.type(track.mimeType)`. Les en-têtes retournés incluent `Content-Type: audio/mpeg` et `Content-Length: 6718428` (6,41 Mo).<br/>• **Lecture client** : Angular reçoit le `Blob`, génère l'`ObjectURL` locale via `URL.createObjectURL(blob)`, et l'affecte au lecteur HTML5 `<audio [src]="audioUrl()">`.<br/>• **Preuve DevTools** : **Figure 3.3** et **Figure 3.4** (statut `200 OK`). |
-| **4. Une erreur `400` est affichée pour un fichier invalide** | **VALIDÉ** | • **Contrôle préventif Frontend** : Dans `choose()`, tout fichier dépassant 25 Mo ou ayant une extension non autorisée (ex: `.exe`, `.pdf`, `.mp4`) est rejeté localement avec un message explicite dans le signal `uploadError` (`role="alert"`), sans gaspiller de bande passante.<br/>• **Sécurité Backend & Erreur HTTP 400** : Si une requête brute non conforme atteint le serveur, Express / Multer renvoie un statut HTTP `400 Bad Request` avec `{ message: "Format audio non accepté" }` ou `{ message: "Fichier audio requis" }`.<br/>• **Capture Frontend** : Le callback `error` du `subscribe` de `upload()` intercepte l'erreur `400` et affecte `err.error.message` au signal `uploadError()`. |
-| **5. Une piste ne peut être lue que par son propriétaire** | **VALIDÉ** | • **Sécurisation backend** : Dans `app.get("/api/tracks/:id/audio", auth, ...)`, la requête MongoDB filtre strictement par propriétaire : `Track.findOne({ _id: req.params.id, ownerId: req.auth.sub })`.<br/>• **Isolation des utilisateurs** : Si un utilisateur tente d'accéder à l'ID d'une piste appartenant à un autre compte, la requête renvoie `404 Piste inconnue`.<br/>• **Gestion d'erreur frontend** : Le signal `audioError` capture le refus et informe l'utilisateur : *« Impossible de charger ce fichier audio. Assurez-vous d’être le propriétaire de la piste. »* |
-
----
-
-#### B. Synthèse de conformité des Livrables TP2
-
-Le tableau suivant récapitule l'ensemble des livrables exigés dans la section **« Livrables TP2 »** du sujet :
-
-| Livrable officiel demandé | Statut | Preuve et détails dans le projet |
-| :--- | :---: | :--- |
-| **1. Code frontend complété** | **CONFORME & TESTÉ** | Code Angular 22 moderne respectant les meilleures pratiques : composants standalone, Signals (`signal()`, `computed()`), nouveau flux de contrôle natif (`@if`, `@for`, `@empty`), injection par `inject()`, typage strict sans `any`, et cycle de vie propre avec `ngOnDestroy()`. Build sans warning (`npm run build` : 311.34 kB). |
-| **2. Cards de bibliothèque lisibles** | **CONFORME & TESTÉ** | Design responsive et soigné : cartes individuelles affichant le titre, un badge court du codec audio (`MP3`, `WAV`, `OGG`, `M4A`), le nom du fichier d'origine, la taille formatée lisiblement (`formatBytes()`), la date d'ajout en français (`formatDate()`), l'état de lecture actif et les boutons d'action. (**Figure 3.1** et **Figure 3.5**). |
-| **3. Capture Network de la pagination ou de l’upload** | **FOURNI** | • **Figure 2.4** : Capture DevTools Network montrant la pagination serveur `GET /api/tracks?page=2&limit=5` (200 OK).<br/>• **Figure 3.2** : Capture de l'upload réussi avec réinitialisation du formulaire et notification verte.<br/>• **Figure 3.6** : Capture Network montrant la suppression d'une piste `DELETE /api/tracks/:id` (204 No Content). |
-| **4. Capture ou démonstration de la lecture audio authentifiée** | **FOURNI** | • **Figure 3.3** : Capture de l'interface avec la piste en cours de lecture (badge « En cours », surbrillance visuelle).<br/>• **Figure 3.4** : Capture DevTools Network montrant la requête `GET /api/tracks/:id/audio` (200 OK) avec l'en-tête `Authorization: Bearer <token>` et le flux audio binaire reçu. |
-| **5. Explication écrite du choix `Blob` et `ObjectURL`** | **RÉDIGÉ & ARGUMENTÉ** | **Section 2.C** : Explication détaillée démontrant pourquoi la balise native `<audio src="...">` ne peut pas recevoir d'en-tête `Authorization`, imposant l'usage de `HttpClient` avec `{ responseType: 'blob' }` puis de `URL.createObjectURL(blob)`. |
-| **6. Réponses aux questions sur mémoire, buffering et streaming audio** | **RÉDIGÉ & ARGUMENTÉ** | **Section 4** : Réponses complètes et pédagogiques aux 5 questions du sujet :<br/>1. Envoi par flux Node.js (`res.sendFile`) sans pic mémoire serveur.<br/>2. Réception 100% du `Blob` en RAM client avant l'émission de l'Observable.<br/>3. Non-chargement des 100 fichiers audio lors de l'affichage de la liste.<br/>4. Risque de saturation en cas de 100 éléments `<audio>` simultanés.<br/>5. Nécessité absolue de `URL.revokeObjectURL()` pour éviter les fuites de RAM. |
 
 
+   Ajout de la suppression de pistes et de la recherche par titre :
+   
+![alt text](image-9.png)
+
+Suppression avec confirmation via DELETE /api/tracks/:id ;
+![alt text](image-10.png)
