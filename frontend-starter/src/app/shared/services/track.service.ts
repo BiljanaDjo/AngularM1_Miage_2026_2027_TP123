@@ -39,4 +39,16 @@ export class TrackService {
       responseType: 'blob',
     });
   }
+
+  /**
+   * Supprime une piste audio sur le serveur (DELETE /api/tracks/:id).
+   * 
+   * Remarque M1 : Le backend Express vérifie que l'utilisateur connecté est bien le
+   * propriétaire de la piste, supprime le document dans MongoDB Atlas et efface
+   * le fichier binaire correspondant sur le disque serveur (code HTTP 204 No Content).
+   */
+  delete(id: string) {
+    return this.http.delete<void>(`/api/tracks/${id}`);
+  }
 }
+

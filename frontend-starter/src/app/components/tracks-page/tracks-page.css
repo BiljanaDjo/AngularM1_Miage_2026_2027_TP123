@@ -1,1 +1,282 @@
-:host { display: block; }
+:host {
+  display: block;
+}
+
+/* Liste des cards de bibliothèque */
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+
+/* Card individuelle de piste */
+.track-card {
+  padding: 1rem 1.2rem;
+  background: #ffffff;
+  border: 1px solid #e1ebe7;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(23, 49, 42, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.track-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(23, 49, 42, 0.08);
+  border-color: #b8cbc5;
+}
+
+/* Mise en valeur visuelle de la piste en cours de lecture */
+.track-card.playing {
+  border: 2px solid #1d755e;
+  background: #f4faf7;
+}
+
+.track-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.track-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #123d32;
+}
+
+/* Badge du format audio (MP3, WAV, OGG...) */
+.badge-format {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #123d32;
+  background: #e1efe9;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.track-original-name {
+  margin: 0.35rem 0 0.8rem 0;
+  font-size: 0.85rem;
+  color: #61756f;
+  word-break: break-all;
+}
+
+.track-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.track-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.82rem;
+  color: #526660;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Bouton d'écoute / lecture */
+.btn-play {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: #1d755e;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-play:hover:not(:disabled) {
+  background: #155e4b;
+}
+
+.btn-play:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.track-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Bouton de suppression avec confirmation */
+.btn-delete {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  color: #a82020;
+  background: #fdf2f2;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #f8d7da;
+  transform: scale(1.05);
+}
+
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Barre de recherche / filtre par titre */
+.filter-bar {
+  margin: 1rem 0 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filter-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #123d32;
+  margin: 0;
+}
+
+.filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filter-input-wrapper input {
+  width: 100%;
+  padding: 0.65rem 2.2rem 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  border: 1px solid #b8cbc5;
+  border-radius: 8px;
+  background: #fbfdfc;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filter-input-wrapper input:focus {
+  outline: none;
+  border-color: #1d755e;
+  box-shadow: 0 0 0 3px rgba(29, 117, 94, 0.15);
+}
+
+.btn-clear-filter {
+  position: absolute;
+  right: 0.5rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  color: #61756f;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.btn-clear-filter:hover {
+  background: #e1ebe7;
+  color: #123d32;
+}
+
+.btn-reset-filter {
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1d755e;
+  background: #edf7f4;
+  border: 1px solid #c2e5d9;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-reset-filter:hover {
+  background: #d4eee5;
+}
+
+/* Lecteur audio dédié et moderne */
+.player-container {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: #123d32;
+  color: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(18, 61, 50, 0.15);
+}
+
+.player-header {
+  margin-bottom: 0.75rem;
+}
+
+.player-subtitle {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  opacity: 0.8;
+  color: #7de8cb;
+}
+
+.player-title {
+  font-size: 1.05rem;
+  margin-top: 0.2rem;
+}
+
+.player-filename {
+  font-size: 0.85rem;
+  font-weight: normal;
+  opacity: 0.75;
+  margin-left: 0.4rem;
+}
+
+.player-container audio {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-radius: 8px;
+}
+
+/* Notifications et retours d'état */
+.success {
+  padding: 0.75rem 1rem;
+  color: #123d32;
+  background: #edf7f4;
+  border: 1px solid #c2e5d9;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0.75rem 0;
+}
+
+.error {
+  padding: 0.75rem 1rem;
+  color: #8a1f1f;
+  background: #fdf2f2;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0.75rem 0;
+}
+
+.loading-indicator,
+.empty-state {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: #61756f;
+  font-style: italic;
+}
+
