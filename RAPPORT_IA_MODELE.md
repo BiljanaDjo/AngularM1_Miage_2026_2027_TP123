@@ -246,30 +246,30 @@ Construire une bibliothèque audio robuste avec une pagination gérée intégral
 #### A. Chargement initial de la bibliothèque et token JWT
 Lors de l'arrivée sur l'application, les requêtes `/api/users/me` et `/api/tracks` sont déclenchées automatiquement.
 
-![Écran initial et panneau réseau](image.png)
+![Écran initial et panneau réseau](captureEcran/image.png)
 *Figure 2.1 — Chargement initial de l'interface et requêtes Fetch/XHR associées.*
 
 L'examen de la requête `GET /api/tracks` dans les DevTools montre que le middleware client injecte bien le token JWT dans l'en-tête de requête :
 
-![En-têtes de la requête GET /api/tracks avec JWT](image-1.png)
+![En-têtes de la requête GET /api/tracks avec JWT](captureEcran/image-1.png)
 *Figure 2.2 — En-têtes HTTP de la requête de récupération des pistes, avec Authorization Bearer token.*
 
 #### B. Affichage paginé côté client (Page 1)
 En important plusieurs pistes de test, la pagination s'active dès que le total dépasse la limite (ici 5 pistes par page) :
 
-![Pagination - Page 1 avec 5 morceaux](image-2.png)
+![Pagination - Page 1 avec 5 morceaux](captureEcran/image-2.png)
 *Figure 2.3 — Page 1/2 : affichage des 5 premiers morceaux. Le bouton « Précédent » est bien désactivé à la borne minimale, et « Suivant » est actif.*
 
 #### C. Changement de page et requête serveur (Livrable Network TP2)
 Au clic sur « Suivant », la page 2 est chargée. Une nouvelle requête `GET /api/tracks?page=2&limit=5` est émise sur le réseau avec code `200 OK` :
 
-![Requête réseau pour la page 2](image-3.png)
+![Requête réseau pour la page 2](captureEcran/image-3.png)
 *Figure 2.4 — Page 2/2 : nouvelle requête HTTP GET /api/tracks?page=2&limit=5 dans l'onglet Network (200 OK), bouton « Suivant » désactivé à la borne maximale.*
 
 #### D. Gestion réactive des erreurs réseau
 Pour tester la robustesse face aux pannes, le backend a été arrêté temporairement. Au clic sur « Actualiser », le signal `error` capture le rejet de la requête et affiche un message clair sans bloquer l'application :
 
-![Affichage réactif du message d'erreur](image-4.png)
+![Affichage réactif du message d'erreur](captureEcran/image-4.png)
 *Figure 2.5 — Affichage de l'erreur via le signal error() en cas d'indisponibilité du serveur.*
 
 ### 5. Erreurs ou propositions adaptées
@@ -439,15 +439,15 @@ La requête audio **échouerait immédiatement avec une erreur HTTP 401 Unauthor
    * Affichage du titre, du badge court de format (`MP3`, `WAV`, `OGG`, `M4A`), du nom du fichier d'origine, de la taille formatée en Ko/Mo (`formatBytes()`) et de la date d'ajout en français (`formatDate()`).
    * Bouton d'écoute réactif changeant d'état (`▶ Écouter`, `⏳ Chargement…`, `🔊 En cours`) et mise en évidence de la carte en cours de lecture (`.playing`).
 
-   ![alt text](image-5.png)
-   ![alt text](image-6.png)
+   ![alt text](captureEcran/image-5.png)
+   ![alt text](captureEcran/image-6.png)
 4. **Sécurisation du lecteur audio et gestion du cycle de vie** :
    * Ajout du signal `currentTrack` et d'un conteneur dédié pour le lecteur audio affichant le morceau en cours d'écoute.
    * Gestion d'erreur via le signal `audioError` et l'événement natif `(error)="onAudioPlaybackError()"`.
    * Implémentation du cycle de vie Angular `OnDestroy` avec la méthode `ngOnDestroy()` appelant systématiquement `URL.revokeObjectURL(this.audioUrl())` pour prévenir toute fuite de mémoire RAM.
 
-   ![alt text](image-7.png)
-   ![alt text](image-8.png)
+   ![alt text](captureEcran/image-7.png)
+   ![alt text](captureEcran/image-8.png)
 
 ---
 
@@ -478,7 +478,75 @@ La requête audio **échouerait immédiatement avec une erreur HTTP 401 Unauthor
 
    Ajout de la suppression de pistes et de la recherche par titre :
    
-![alt text](image-9.png)
+![alt text](captureEcran/image-9.png)
 
 Suppression avec confirmation via DELETE /api/tracks/:id ;
-![alt text](image-10.png)
+![alt text](captureEcran/image-10.png)
+
+---
+
+# TP3 — Fiabilisation et enrichissement du frontend
+
+## Mission 5 — Suppression d’une piste
+
+### 1. Objectif et Réalisations
+* **Action « Supprimer » dans chaque card** : Bouton 🗑️ avec dialogue de confirmation natif `window.confirm(...)` pour éviter toute suppression involontaire.
+* **Protection anti-double clic** : Signal `deletingId` désactivant immédiatement le bouton et affichant `⏳` pendant l'appel HTTP.
+* **Composant Angular SnackBar** : Création d'un composant standalone `<app-snackbar />` et de son service réactif `SnackbarService` affichant des messages animés et temporisés (succès vert, erreur rouge, accessible avec `role="status"` et `role="alert"`).
+* **Mise à jour et cycle de vie** :
+  * Si la piste supprimée était en cours d'écoute, arrêt immédiat du lecteur et révocation de l'URL Blob (`URL.revokeObjectURL`) pour éviter les fuites mémoire.
+  * Rechargement automatique de la liste (`this.load()`) et recul d'une page si le dernier morceau d'une page > 1 est supprimé.
+* **Gestion des cas d'erreur (404 / 403)** : Si la piste n'existe plus (supprimée dans un autre onglet) ou n'appartient pas à l'utilisateur, affichage d'un message dédié dans le SnackBar et resynchronisation immédiate de la liste avec la base.
+
+### 2. Pourquoi le guard et l'interface ne suffisent pas à sécuriser la suppression ?
+* **Environnement client non fiable** : Le guard Angular (`authGuard`) et l'interface graphique s'exécutent sur la machine de l'utilisateur. Ils peuvent être contournés ou neutralisés à tout moment (via la console DevTools, cURL ou Postman).
+* **Sécurité réelle assurée par le Backend** : Seul le serveur Express, via le middleware `auth`, décode et valide la signature cryptographique du JWT. Il extrait `req.auth.sub` et garantit côté MongoDB que l'utilisateur est bien le propriétaire légitime du morceau (`Track.findOneAndDelete({ _id: req.params.id, ownerId: req.auth.sub })`). Si l'ID est inconnu ou appartient à un tiers, Express rejette la requête avec un code HTTP 404.
+
+### 3. Fichiers créés et modifiés
+* `frontend-starter/src/app/shared/services/snackbar.service.ts` : Service réactif de notification par SnackBar (`success`, `error`, auto-dismiss).
+* `frontend-starter/src/app/shared/components/snackbar/snackbar.component.ts|html|css` : Composant autonome SnackBar avec styles et animations.
+* `frontend-starter/src/app/components/app/app.ts|html` : Insertion globale de `<app-snackbar />`.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.ts` : Appel à `TrackService.delete()`, confirmation, protection double clic, SnackBar et gestion 404/403.
+* `frontend-starter/src/app/shared/services/track.service.ts` : Méthode `delete(id: string)` vers `DELETE /api/tracks/:id`.
+
+### 4. Captures d'écran et Démonstrations
+
+![alt text](captureEcran/image-11.png)
+
+SnackBar: 
+![alt text](captureEcran/image-12.png)
+
+---
+
+## Mission 6 — Progression de l’upload
+
+### 1. Objectif et Réalisations
+* **Activation des options `{ reportProgress: true, observe: 'events' }`** dans `TrackService.upload()` pour recevoir le flux complet des événements HTTP plutôt qu'une simple réponse terminale.
+* **Gestion explicite des 4 états requis** :
+  1. *Absence d'upload en cours* : `uploadProgress() === null` et `uploading() === false`.
+  2. *Upload en cours avec pourcentage* : Signal `uploadProgress` mis à jour réactivement lors de `HttpEventType.UploadProgress` (`Math.round((100 * event.loaded) / event.total)`). Rendu d'une barre de progression animée avec libellé et pourcentage dynamique.
+  3. *Réussite* : Déclenchée à la réception de `HttpEventType.Response`, affichage du SnackBar vert, réinitialisation du formulaire et rechargement de la bibliothèque.
+  4. *Échec* : Gestion via le callback `error`, signal `uploadError` et notification rouge dans le SnackBar.
+* **Sécurisation & Verrouillage** : Désactivation du titre (`title.disable()`), du champ fichier (`[disabled]="uploading()"`) et du bouton d'envoi pour interdire toute double soumission. Aucun token JWT ni mot de passe n'est logué ou affiché.
+
+### 2. Réponse à la question fondamentale du sujet
+> **Pourquoi un upload avec progression ne se traite pas exactement comme une requête HTTP qui émet uniquement une réponse finale ?**
+
+* **Flux multi-émissions (Stream) vs requête ponctuelle (One-shot)** :
+  * Une requête HTTP classique n'émet **qu'une seule valeur finale** (le corps JSON de la réponse) avant de compléter l'Observable (`complete`).
+  * Un upload avec progression transforme l'Observable en un **flux continu d'événements** (`Stream` d'objets `HttpEvent`). L'Observable émet de multiples événements intermédiaires de type `HttpEventType.UploadProgress` (paquets d'octets transmis au fil de l'eau) avant d'émettre enfin l'événement terminal `HttpEventType.Response`.
+* **Conséquences directes sur le code Angular** :
+  1. **Filtrage obligatoire par `event.type`** : On ne peut pas traiter directement la valeur émise comme l'objet métier `Track` ; il est indispensable d'inspecter `event.type` (`HttpEventType.UploadProgress` pour extraire `event.loaded / event.total`, puis `HttpEventType.Response` pour récupérer `event.body`).
+  2. **Gestion d'un état transitoire en temps réel** : L'interface doit refléter en direct l'avancement (Signal `uploadProgress`) et bloquer les contrôles utilisateurs tant que la réponse finale du serveur n'a pas été confirmée.
+  3. **Passerelle bas niveau du navigateur** : Angular s'abonne à l'événement DOM `ProgressEvent` natif issu de `XMLHttpRequest.upload.onprogress` et le transforme en flux réactif pour les Signals du composant.
+
+### 3. Fichiers modifiés
+* `frontend-starter/src/app/shared/services/track.service.ts` : Méthode `upload()` typée `Observable<HttpEvent<Track>>` avec `reportProgress: true` et `observe: 'events'`.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.ts` : Signal `uploadProgress`, traitement des événements `UploadProgress` et `Response`, verrouillage du `FormControl`.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.html` : Barre de progression accessible (`role="progressbar"`), affichage du pourcentage et désactivation des champs.
+* `frontend-starter/src/app/components/tracks-page/tracks-page.css` : Styles pour `.progress-container`, `.progress-bar-wrapper`, `.progress-bar-fill` et `.progress-percent`.
+
+### 4. Captures d'écran et Démonstrations
+
+Barre de progression en cours :
+![alt text](captureEcran/image13.png)

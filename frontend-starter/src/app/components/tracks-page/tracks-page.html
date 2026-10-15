@@ -30,8 +30,35 @@
           type="file"
           accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,.mp3,.wav,.ogg,.m4a"
           (change)="choose($event)"
+          [disabled]="uploading()"
         />
       </label>
+
+      <!-- BARRE DE PROGRESSION EN DIRECT (Mission 6) -->
+      @if (uploadProgress() !== null) {
+        <div
+          class="progress-container"
+          role="progressbar"
+          [attr.aria-valuenow]="uploadProgress()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-label="Progression du téléversement"
+        >
+          <div class="progress-header">
+            <span class="progress-status">
+              @if (uploadProgress() === 100) {
+                ✅ Téléversement terminé (100 %) — Enregistrement…
+              } @else {
+                ⏳ Envoi des données en cours…
+              }
+            </span>
+            <b class="progress-percent">{{ uploadProgress() }} %</b>
+          </div>
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar-fill" [style.width.%]="uploadProgress()"></div>
+          </div>
+        </div>
+      }
 
       <button
         type="button"
@@ -39,7 +66,11 @@
         [disabled]="!file || uploading()"
       >
         @if (uploading()) {
-          Envoi en cours…
+          @if (uploadProgress() !== null) {
+            Envoi… {{ uploadProgress() }} %
+          } @else {
+            Envoi en cours…
+          }
         } @else {
           Envoyer la piste
         }

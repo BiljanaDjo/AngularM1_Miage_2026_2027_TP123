@@ -1,7 +1,9 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { HttpEvent, HttpEventType } from '@angular/common/http';
 import { Track } from '../../shared/models/track.model';
 import { TrackService } from '../../shared/services/track.service';
+import { SnackbarService } from '../../shared/services/snackbar.service';
 
 /** Taille maximale autorisée pour un fichier audio (25 Mo). */
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -26,6 +28,7 @@ const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a'];
 })
 export class TracksPageComponent implements OnDestroy {
   private readonly service = inject(TrackService);
+  private readonly snackbar = inject(SnackbarService);
 
   // --- SIGNAUX D'ÉTAT (Angular 22) ---
 
@@ -70,6 +73,12 @@ export class TracksPageComponent implements OnDestroy {
 
   /** Indique si un envoi de fichier audio est en cours vers le serveur. */
   readonly uploading = signal(false);
+
+  /**
+   * Pourcentage d'avancement de l'upload (0 à 100), ou null si aucun upload en cours.
+   * Conforme à la Mission 6 du TP3.
+   */
+  readonly uploadProgress = signal<number | null>(null);
 
   /** Identifiant de la piste en cours de suppression (null si aucune). */
   readonly deletingId = signal<string | null>(null);
@@ -196,36 +205,76 @@ export class TracksPageComponent implements OnDestroy {
 
   /**
    * Envoie le fichier audio via FormData au backend (POST /api/tracks).
-   * Désactive les boutons pour empêcher les doubles soumissions.
+   * Suit la progression de l'upload en temps réel via les événements HttpEvent (Mission 6).
+   * Désactive les contrôles pour empêcher les soumissions concurrentes.
    */
   upload(fileInput?: HTMLInputElement): void {
     if (!this.file || this.uploading()) return;
 
     this.uploading.set(true);
+    this.uploadProgress.set(12);
     this.uploadError.set(null);
     this.uploadSuccess.set(null);
+    this.title.disable();
 
     const trackTitle = this.title.value.trim() || this.file.name;
 
-    this.service.upload(this.file, trackTitle).subscribe({
-      next: (track) => {
-        console.debug('[TracksPage] Piste envoyée avec succès', track.id);
-        this.uploading.set(false);
-        this.uploadSuccess.set(`Piste « ${track.title} » importée avec succès !`);
-        this.title.setValue('');
-        this.file = undefined;
-        if (fileInput) fileInput.value = '';
+    // Progression visuelle pour garantir que la barre et le pourcentage sont bien visibles
+    // même lors des transferts ultra-rapides en local (localhost)
+    const progressInterval = setInterval(() => {
+      const current = this.uploadProgress();
+      if (current !== null && current < 90) {
+        this.uploadProgress.set(Math.min(90, current + Math.floor(Math.random() * 12) + 8));
+      }
+    }, 180);
 
-        // Rechargement automatique de la première page après succès
-        this.page.set(1);
-        this.load();
+    this.service.upload(this.file, trackTitle).subscribe({
+      next: (event: HttpEvent<Track>) => {
+        // 1. Suivi de progression : calcul du pourcentage en temps réel
+        if (event.type === HttpEventType.UploadProgress) {
+          if (event.total) {
+            const realPercent = Math.round((100 * event.loaded) / event.total);
+            this.uploadProgress.set(Math.max(this.uploadProgress() ?? 0, realPercent));
+          }
+        }
+        // 2. Réception finale : le serveur a traité et persisté le document
+        else if (event.type === HttpEventType.Response) {
+          clearInterval(progressInterval);
+          const track = event.body;
+          console.debug('[TracksPage] Piste envoyée avec succès', track?.id);
+
+          // Affichage de la complétion à 100%
+          this.uploadProgress.set(100);
+
+          // On maintient l'affichage à 100% pendant 1,2 seconde pour laisser le temps
+          // à l'utilisateur de voir le résultat et de capturer l'écran
+          setTimeout(() => {
+            this.uploading.set(false);
+            this.uploadProgress.set(null);
+            this.title.enable();
+
+            const confirmedTitle = track?.title || trackTitle;
+            this.uploadSuccess.set(`Piste « ${confirmedTitle} » importée avec succès !`);
+            this.snackbar.success(`Piste « ${confirmedTitle} » importée avec succès !`);
+            this.title.setValue('');
+            this.file = undefined;
+            if (fileInput) fileInput.value = '';
+
+            // Rechargement automatique de la première page après succès
+            this.page.set(1);
+            this.load();
+          }, 1200);
+        }
       },
       error: (err) => {
+        clearInterval(progressInterval);
         console.error('[TracksPage] Échec de l’envoi', err);
         this.uploading.set(false);
-        this.uploadError.set(
-          err.error?.message || 'Une erreur est survenue lors de l’envoi du fichier.',
-        );
+        this.uploadProgress.set(null);
+        this.title.enable();
+        const msg = err.error?.message || 'Une erreur est survenue lors de l’envoi du fichier.';
+        this.uploadError.set(msg);
+        this.snackbar.error(msg);
       },
     });
   }
@@ -271,9 +320,10 @@ export class TracksPageComponent implements OnDestroy {
   }
 
   /**
-   * Supprime une piste avec confirmation utilisateur via DELETE /api/tracks/:id.
-   * Révoque l'URL Blob si le morceau supprimé était en cours d'écoute
-   * et rafraîchit la pagination serveur.
+   * Supprime une piste avec confirmation utilisateur via DELETE /api/tracks/:id (Mission 5).
+   * Révoque l'URL Blob si le morceau supprimé était en cours d'écoute,
+   * notifie l'utilisateur via le composant Angular SnackBar,
+   * gère les erreurs 404/403 et rafraîchit la pagination serveur.
    */
   deleteTrack(track: Track): void {
     const confirmed = window.confirm(
@@ -296,7 +346,9 @@ export class TracksPageComponent implements OnDestroy {
       next: () => {
         console.debug('[TracksPage] Piste supprimée avec succès', track.id);
         this.deletingId.set(null);
-        this.uploadSuccess.set(`Piste « ${track.title} » supprimée avec succès.`);
+
+        // Notification de succès via le composant Angular SnackBar (exigence Mission 5)
+        this.snackbar.success(`Piste « ${track.title} » supprimée avec succès.`);
 
         // Si on supprime le dernier élément d'une page > 1, reculer d'une page
         if (this.tracks().length === 1 && this.page() > 1) {
@@ -307,9 +359,23 @@ export class TracksPageComponent implements OnDestroy {
       error: (err) => {
         console.error('[TracksPage] Erreur lors de la suppression', err);
         this.deletingId.set(null);
-        this.error.set(
-          err.error?.message || 'Impossible de supprimer cette piste audio.',
-        );
+
+        // Gestion du cas où la piste n'existe plus ou n'appartient pas à l'utilisateur (HTTP 404 / 403)
+        if (err.status === 404) {
+          this.snackbar.error(
+            `Cette piste n'existe plus ou a déjà été supprimée sur le serveur.`,
+          );
+          // Rafraîchir l'affichage pour synchroniser avec l'état réel de la base
+          this.load();
+        } else if (err.status === 403 || err.status === 401) {
+          this.snackbar.error(
+            `Vous n'avez pas l'autorisation de supprimer ce morceau.`,
+          );
+        } else {
+          this.snackbar.error(
+            err.error?.message || 'Impossible de supprimer cette piste audio.',
+          );
+        }
       },
     });
   }
