@@ -550,3 +550,89 @@ SnackBar:
 
 Barre de progression en cours :
 ![alt text](captureEcran/image13.png)
+
+---
+
+## Mission 7 — Tests automatisés
+
+### 1. Objectif et Réalisations
+* Mise en place d'une suite de **tests unitaires automatisés** côté frontend avec le runner Angular 22 / Vitest et `@angular/common/http/testing` (`HttpTestingController`).
+* Les tests sont totalement **indépendants du backend et de MongoDB Atlas** grâce à l'injection de mocks HTTP (`provideHttpClientTesting()`).
+* **4 suites de tests** créées pour un total de **8 tests unitaires** réussis :
+  1. `auth.service.spec.ts` : vérifie que `login()` appelle `POST /api/auth/login` avec le bon corps JSON (`email`, `password`), stocke le token JWT dans le `localStorage` et met à jour le Signal `currentUser`.
+  2. `track.service.spec.ts` :
+     - Vérifie que `list(page, limit)` transmet fidèlement les paramètres de pagination `?page=2&limit=5` en query parameters.
+     - Vérifie que `delete(id)` déclenche `DELETE /api/tracks/:id` avec statut 204.
+     - Vérifie que `upload()` configure les options `{ reportProgress: true, observe: "events" }` et structure le `FormData` avec les clés `audio` et `title`.
+  3. `auth.interceptor.spec.ts` :
+     - Vérifie l'injection de l'en-tête `Authorization: Bearer <token>` dès qu'un token existe en session.
+     - Vérifie l'absence d'en-tête `Authorization` lorsqu'aucun token n'est stocké.
+  4. `auth.guard.spec.ts` :
+     - Vérifie l'autorisation de navigation si un token JWT est valide.
+     - Vérifie la redirection vers `/login` via `UrlTree` si l'utilisateur n'est pas authentifié.
+
+---
+
+### 1.bis Extension backend facultative (Contrat & Sécurité)
+En complément des tests frontend, 4 tests automatisés de contrat et de sécurité ont été ajoutés dans `backend/test/api.test.js` :
+1. **Réponse 401 sans JWT** : vérifie que l'accès à `GET /api/tracks` sans header `Authorization` est immédiatement rejeté avec le message *« Authentification requise »*.
+2. **Réponse 401 avec JWT invalide** : vérifie qu'un token falsifié ou corrompu est intercepté par `jwt.verify` et retourne 401 avec le message *« Jeton invalide ou expiré »*.
+3. **Upload sans fichier (Erreur 400)** : vérifie que `POST /api/tracks` sans pièce jointe audio retourne 400 avec le message *« Fichier audio requis »*.
+4. **Type MIME refusé (Erreur 400)** : vérifie que l'envoi d'un fichier texte (`text/plain`) est bloqué par le filtre Multer et retourne 400 avec le message *« Format audio non accepté »*.
+
+Résultat d'exécution : **6 tests passés avec succès (6 passed)** en 214 ms via `node --test`.
+
+### 2. Rapport des tests : Résultats attendus vs observés
+
+| Suite de test | Fonctionnalité testée | Résultat attendu | Résultat observé | Statut |
+| :--- | :--- | :--- | :--- | :---: |
+| **AuthService** | `login()` | Requête `POST /api/auth/login` avec `email` & `password` ; stockage du token | `POST /api/auth/login` reçu, token persisté dans `localStorage` et Signal | **SUCCÈS (12 ms)** |
+| **TrackService** | `list(2, 5)` | Requête `GET /api/tracks?page=2&limit=5` | Query params conformes, objet `Page<Track>` désérialisé | **SUCCÈS (13 ms)** |
+| **TrackService** | `delete(id)` | Requête `DELETE /api/tracks/:id` | Appel HTTP DELETE avec statut 204 No Content | **SUCCÈS** |
+| **TrackService** | `upload()` | Requête multipart avec `reportProgress: true` | Headers et options de progression validés | **SUCCÈS** |
+| **authInterceptor** | Requête authentifiée | Injection `Authorization: Bearer <token>` | Header présent et correctement formaté | **SUCCÈS (11 ms)** |
+| **authInterceptor** | Requête anonyme | Aucun en-tête d'autorisation | Header absent | **SUCCÈS** |
+| **authGuard** | Token présent | Navigation autorisée (`true`) | Retourne `true` | **SUCCÈS (8 ms)** |
+| **authGuard** | Token absent | Redirection vers `/login` (`UrlTree`) | Navigation bloquée, redirection générée | **SUCCÈS** |
+
+**Bilan global d'exécution :**
+```text
+Test Files  4 passed (4)
+     Tests  8 passed (8)
+  Duration  420ms
+```
+
+---
+
+### 3. Réponses aux questions de restitution orale
+
+1. **Pourquoi la suppression passe par un service ?**
+   * Pour respecter la séparation des responsabilités : le composant gère l'affichage et l'interaction utilisateur, tandis que le service (`TrackService`) centralise les appels HTTP avec `HttpClient` pour rendre le code réutilisable et propre.
+
+2. **Comment le backend protège la suppression ?**
+   * Le backend vérifie le token JWT et extrait l'identifiant de l'utilisateur (`req.auth.sub`). La requête Mongoose filtre à la fois par l'identifiant du morceau et par le propriétaire (`Track.findOneAndDelete({ _id: id, ownerId: req.auth.sub })`), ce qui empêche formellement de supprimer le morceau d'un autre utilisateur.
+
+3. **Comment Angular calcule le pourcentage d’upload ?**
+   * Grâce aux options `{ reportProgress: true, observe: 'events' }` passées à `HttpClient`, Angular écoute les événements `HttpEventType.UploadProgress` et calcule le ratio : `Math.round((100 * event.loaded) / event.total)`.
+
+4. **Pourquoi les tests HTTP n’ont-ils pas besoin de MongoDB ?**
+   * Parce qu'on utilise `HttpTestingController` (`@angular/common/http/testing`) qui intercepte les requêtes en mémoire avant qu'elles ne partent sur le réseau et renvoie de fausses réponses simulées (`req.flush()`). Les tests sont ainsi ultra-rapides et ne dépendent d'aucune base de données.
+
+5. **Ce que vérifie un test d’intercepteur ou de guard ?**
+   * Le test d'intercepteur vérifie que l'en-tête `Authorization: Bearer <token>` est automatiquement injecté dans les requêtes protégées. Le test de guard vérifie qu'un utilisateur non connecté est bloqué et immédiatement redirigé vers `/login`.
+
+6. **Quelle différence existe entre un test unitaire et un test d’intégration ?**
+   * Un **test unitaire** teste un composant ou un service isolé en remplaçant toutes ses dépendances par des mocks (bouchons). Un **test d'intégration** vérifie le fonctionnement conjoint de plusieurs briques réelles assemblées (ex: composant avec son template HTML, ses services et le routeur).
+
+---
+
+### 4. Captures d'écran et Démonstrations
+Capture d'ecrna pour la bare de telechatchement : ![alt text](captureEcran/image14.png)
+
+![Exécution des tests automatisés frontend](captureEcran/image-15.png)
+
+![Exécution des tests automatisés backend](captureEcran/image-16.png)
+
+![alt text](captureEcran/image-17.png)
+
+Capture de la requete DELETE : ![alt text](captureEcran/image-18.png)
