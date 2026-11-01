@@ -485,23 +485,6 @@ La requête audio **échouerait immédiatement avec une erreur HTTP 401 Unauthor
 
 # TP3 — Fiabilisation et enrichissement du frontend
 
-## Synthèse globale du TP3 (Respect des 8 rubriques méthodologiques)
-
-Pour chaque mission du TP3, les 8 points exigés par les consignes (objectif, prompt principal, plan proposé par l'agent, vérifications réalisées, erreurs ou propositions rejetées, fichiers effectivement modifiés, preuve de fonctionnement, ce que je sais maintenant expliquer sans l'agent) sont détaillés ci-dessous. Voici le tableau récapitulatif global :
-
-| # | Rubrique | Mission 5 — Suppression d’une piste | Mission 6 — Progression de l’upload | Mission 7 — Tests automatisés |
-| :-: | :--- | :--- | :--- | :--- |
-| **1** | **Objectif** | Suppression via `DELETE /api/tracks/:id`, dialogue `window.confirm`, protection anti-double clic, notification `SnackbarComponent`, rafraîchissement réactif et gestion 404/403. | Affichage de la progression en direct, gestion explicite des 4 états (inactif, en cours %, succès, échec), verrouillage du formulaire et confidentialité. | 8 tests frontend Vitest avec `HttpTestingController` (indépendance totale de MongoDB/backend) + 4 tests d'extension backend de contrat et sécurité. |
-| **2** | **Prompt principal** | *"On passe à la mission 5 : suppression d'une piste. Ajoute l'action supprimer avec confirmation, protection anti-double clic, SnackBar pour les retours et rafraîchissement."* | *"On fait la mission 6 et n'oublie pas de mettre la réponse à la question dans le rapport."* | *"Fais-moi la mission 7."* et *"On peut faire 3 tests de la partie Extension backend facultative et ensuite on passera aux vérifications finales."* |
-| **3** | **Plan proposé par l'agent et exécuté pas à pas** | 1. Service/Composant SnackBar<br>2. `TrackService.delete()`<br>3. `TracksPageComponent.deleteTrack()`<br>4. Bouton 🗑️ dans le HTML<br>5. Build & test. | 1. `reportProgress: true` & `observe: 'events'`<br>2. Signal `uploadProgress`<br>3. Temporisation 1.2s à 100 %<br>4. Barre CSS animée<br>5. Build & test. | 1. Suites de tests frontend (`auth`, `track`, `interceptor`, `guard`)<br>2. Résolution du typage TypeScript (`limit: 5`)<br>3. Extension backend (`node:test`)<br>4. Exécution globale. |
-| **4** | **Vérifications réalisées** | Annulation vérifiée, suppression confirmée (`204 No Content`), SnackBar vert temporisé, rafraîchissement immédiat et coupure/nettoyage mémoire du lecteur audio. | Verrouillage immédiat des contrôles, montée fluide de 0 à 100 %, pause visuelle, SnackBar vert et réinitialisation du formulaire. | `npm test` frontend : 8/8 tests validés en 431 ms.<br>`npm test` backend : 6/6 tests validés en 214 ms.<br>Aucune fuite de données sensibles dans la console. |
-| **5** | **Erreurs rencontrées ou propositions rejetées** | Rejet d'une `alert()` bloquante au profit du `SnackbarComponent` accessible ; gestion des erreurs 404 lors d'une suppression concurrente dans un autre onglet. | Problème de vitesse locale sur `localhost` résolu par un palier temporisé à 100 % ; rejet d'une requête classique sans flux d'événements. | Erreur `TS2741: Property 'limit' is missing` corrigée dans `mockPage` ; configuration `"development"` ajoutée dans `angular.json` ; rejet des tests sur vraie base MongoDB. |
-| **6** | **Fichiers effectivement modifiés** | `snackbar.service.ts`, `snackbar.component.*`, `track.service.ts`, `tracks-page.ts`, `tracks-page.html`, `app.html`. | `track.service.ts`, `tracks-page.ts`, `tracks-page.html`, `tracks-page.css`. | `auth.service.spec.ts`, `track.service.spec.ts`, `auth.interceptor.spec.ts`, `auth.guard.spec.ts`, `tsconfig.app.json`, `angular.json`, `backend/test/api.test.js`. |
-| **7** | **Preuve de fonctionnement** | Build réussi (318 kB), trace réseau `DELETE 204` et captures `image-11.png`, `image-12.png`. | Trace multipart, et captures `image13.png`, `image14.png`, `image-19.png`, `image-20.png`. | Tableaux des résultats attendus vs observés, trace `npm test` et captures `image-15.png` à `image-18.png`. |
-| **8** | **Ce que je sais maintenant expliquer sans l'agent** | Rôle architectural du service vs composant + démonstration que seul le backend assure la sécurité (`req.auth.sub` et `ownerId`). | Formule mathématique du pourcentage d'upload via `HttpEventType.UploadProgress` + différence flux continu (Stream) vs requête ponctuelle. | Réponses aux questions orales : mocking mémoire avec `HttpTestingController`, rôle des intercepteurs/guards, différence test unitaire vs intégration. |
-
----
-
 ## Mission 5 — Suppression d’une piste
 
 ### 1. Objectif
